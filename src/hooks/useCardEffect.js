@@ -3,38 +3,43 @@ import  {useState, useEffect, useRef, useCallback} from 'react';
 import * as cardApis from '../apis/cardApi';
 
 
-export default function useCardEffect (pageSize, loadMore) {
+export default function useCardEffect (pageSize, loadMore, searchTerm) {
     const [loading, setLoading] = useState(true);
     const [cardError, setCardError] = useState(false);
     const [cards, setCards] = useState([]);
 
-    const  getCards = async ()  => {
-     const result =   await  cardApis.getCards({pageSize});
+    const  getCards = async ({loadMore, searchTerm})  => {
+     const result =   await  cardApis.getCards({pageSize, loadMore, searchTerm});
      return result;
     }
+
+    useEffect(() => {
+        if(searchTerm) {
+            setCards([]);
+        }
+    },[searchTerm])
 
     useEffect(() => {
         setLoading(true);
         setCardError(false);
      try {
-       getCards().then(result => {
-       console.log(result);
+       getCards({searchTerm}).then(result => {
        setCards(prevCards => {
          return [...prevCards, ...result.data && result.data.cards];
          })
         setLoading(false);
        });
      } catch (error) {
+        setLoading(false);
         setCardError(true);
      }
 
-    },[pageSize])
+    },[pageSize, searchTerm])
 
     useEffect(() => {
-    if(loadMore) {
+    if(loadMore > 1) {
      try {
-        getCards().then(result => {
-            console.log(result);
+        getCards({loadMore, searchTerm}).then(result => {
             setCards(prevCards => {
               return [...prevCards, ...result.data && result.data.cards];
         })
@@ -45,5 +50,5 @@ export default function useCardEffect (pageSize, loadMore) {
     }
     },[loadMore])
 
-    return {loading, cardError, cards}
+    return {loading, cardError, cards, searchTerm}
 }

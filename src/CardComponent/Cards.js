@@ -3,6 +3,7 @@ import useCardApi from '../hooks/useCardApis';
 import styled from 'styled-components';
 import Card from './Card';
 import useCardEffect from '../hooks/useCardEffect';
+import useDebounce from '../hooks/useDebounceEffect';
 
 const CardsComponent = styled.div`
 .container {
@@ -20,13 +21,16 @@ const CardsComponent = styled.div`
 
 export const Cards = props => {
 
-    const {state: cardState} = useCardApi();
-    const [cardResult, setCardResult] = useState([]);
     const [pageSize, setPageSize] = useState(20);
     const observer = useRef();
-    const [loadMore, setLoadMore] = useState(0);
+    const [loadMore, setLoadMore] = useState(1);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isSearching, setIsSearching] = useState(false);
 
-    const {loading, cardError, cards} = useCardEffect(pageSize, loadMore)
+
+    const debouncedSearchTerm = useDebounce(searchTerm, 500);
+
+    const {loading, cardError, cards} = useCardEffect(pageSize, loadMore, debouncedSearchTerm)
 
     const lastCardRef = useCallback(node => {
         if(loading) return;
@@ -39,7 +43,20 @@ export const Cards = props => {
             }
         })
         if(node) observer.current.observe(node)
-    },[loading])
+    },[loading]);
+
+
+
+  // Here's where the API call happens
+  // We use useEffect since this is an asynchronous action
+  useEffect(
+    () => {
+      // Make sure we have a value (user has entered something in input)
+      if (debouncedSearchTerm.length > 0) {
+          setLoadMore(1);
+        setSearchTerm(debouncedSearchTerm)
+      }
+    },[debouncedSearchTerm]);
 
     return (
         <div>
@@ -47,8 +64,14 @@ export const Cards = props => {
               loading ?  
               <div> 
                   Loading ....
-              </div> : 
+              </div> :
+              
             <CardsComponent>
+                <input
+                 value={searchTerm}
+                    placeholder="Search Card By Names"
+                    onChange={e => setSearchTerm(e.target.value)}
+                />
               <div className="cards-container">
                    {
                        cards.length > 0 && cards.map((card, index) => {
@@ -60,7 +83,7 @@ export const Cards = props => {
                        })
                    }
                    {loadMore && <div>
-                                    load more....
+                                    loading more....
                    </div>}
              </div>
             </CardsComponent>
